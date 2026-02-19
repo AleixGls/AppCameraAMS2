@@ -1,29 +1,53 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+let stream = null;
 
-// Wait for the deviceready event before using any of Cordova's device APIs.
-// See https://cordova.apache.org/docs/en/latest/cordova/events/events.html#deviceready
-document.addEventListener('deviceready', onDeviceReady, false);
-
-function onDeviceReady() {
-    // Cordova is now initialized. Have fun!
-
-    console.log('Running cordova-' + cordova.platformId + '@' + cordova.version);
-    document.getElementById('deviceready').classList.add('ready');
+async function iniciarCamara() {
+    const status = document.getElementById('status');
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
+            audio: false
+        });
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+        document.getElementById('foto').style.display = 'none';
+        status.textContent = 'Cámara activa';
+    } catch (err) {
+        status.textContent = 'Error: ' + err.message;
+        console.error(err);
+    }
 }
+
+function tomarFoto() {
+    const video  = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const foto   = document.getElementById('foto');
+    const status = document.getElementById('status');
+
+    if (!stream) {
+        status.textContent = 'Primero inicia la cámara';
+        return;
+    }
+
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+
+    foto.src = canvas.toDataURL('image/png');
+    foto.style.display = 'block';
+    status.textContent = 'Foto tomada';
+}
+
+function detenerCamara() {
+    if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+        document.getElementById('video').srcObject = null;
+        document.getElementById('status').textContent = '⏹ Cámara detenida';
+    }
+}
+
+// Iniciar automáticamente
+document.addEventListener('deviceready', iniciarCamara, false);
+window.addEventListener('load', () => {
+    if (!window.cordova) iniciarCamara();
+});
